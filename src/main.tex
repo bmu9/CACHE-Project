@@ -1,0 +1,151 @@
+\documentclass[14pt]{article}
+
+% set the width of the text on the page
+\oddsidemargin =0cm \evensidemargin = 0cm \textwidth = 6.5in
+
+% set the height of the text on the page 
+\topmargin = 0in \textheight = 8.5in \headheight = 0in \headsep = 0.5 in
+
+\renewcommand{\floatpagefraction}{0.0}
+
+\usepackage{amsthm,amsmath,amssymb,eucal,graphicx}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+
+\theoremstyle{definition}
+\newtheorem{problem}{Problem}
+
+\newcommand{\0}{\ensuremath{\mathbf{0}}}
+\renewcommand{\a}{\ensuremath{\mathbf{a}}}
+\renewcommand{\b}{\ensuremath{\mathbf{b}}}
+\renewcommand{\c}{\ensuremath{\mathbf{c}}}
+\newcommand{\C}{\ensuremath{\mathbf{C}}}
+\renewcommand{\d}{\ensuremath{\mathbf{d}}}
+\newcommand{\e}{\ensuremath{\mathbf{e}}}
+\newcommand{\f}{\ensuremath{\mathbf{f}}}
+\newcommand{\g}{\ensuremath{\mathbf{g}}}
+\newcommand{\h}{\ensuremath{\mathbf{h}}}
+\newcommand{\p}{\ensuremath{\mathbf{p}}}
+\newcommand{\q}{\ensuremath{\mathbf{q}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\s}{\ensuremath{\mathbf{s}}}
+\newcommand{\bu}{\ensuremath{\mathbf{u}}}
+\newcommand{\bv}{\ensuremath{\mathbf{v}}}
+\newcommand{\w}{\ensuremath{\mathbf{w}}}
+\newcommand{\x}{\ensuremath{\mathbf{x}}}
+\newcommand{\y}{\ensuremath{\mathbf{y}}}
+\newcommand{\z}{\ensuremath{\mathbf{z}}}
+\renewcommand{\o}{\ensuremath{\mathbf{o}}}
+\renewcommand{\v}{\ensuremath{\mathbf{v}}}
+\newcommand{\bs}[1]{\ensuremath{\mathbf{#1}}}
+
+
+\begin{document}
+\Large
+\pagestyle{fancy}
+%\lhead{\Large \bf Name:}
+%\rhead{\Large {\bf Due:} 12/6/2021}
+%\chead{\Large \bf CHE 4411 - Homework 11}
+\lfoot{}
+\rfoot{}
+\cfoot{\Large\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+%\input epsf.sty
+%\noindent
+%{\it Directions: This exam is open-book and open-notes.  You may NOT use the internet, a phone, a computer, or any other device besides a standard calculator, and you may NOT communicate with anyone other than Dr.~Scott or a TA during the exam.
+%
+%Do all work on the exam paper.\\
+%}
+
+%\vspace{2cm}
+%\bfseries{Name:}
+
+\newpage
+\title{Chemical Process Fault Detection using Principal Component Analysis - A Short Course Project for Process Control}
+\author{Joseph K. Scott\footnote{School of Chemical and Biomolecular Engineering, Georgia Institute of Technology (jscott319@gatech.edu)}}
+\maketitle
+
+\noindent
+{\bfseries Introduction.} In complex engineered systems, including chemical processes, component malfunctions, process upsets, or other abnormalities are frequent and unavoidable. These events are referred to as \emph{faults}. Detecting faults quickly and accurately is essential for maintaining safety, product quality, and profitability. As a result, \emph{fault detection} has become an integral part of modern control systems. Fault detection methods continuously monitor the process output measurements and attempt to determine whether or not they are consistent with the expected output values given the control actions that have been taken. If the real outputs are significantly different than the expected values, then a fault has likely occurred. However, anomalous measurements can also result from many other factors, such as disturbances and process transients. Therefore, a key challenge in fault detection methods is to properly distinguish between disturbances, which require no special action, and true faults, which require immediate operator attention. Effective fault detection algorithms must detect faults rapidly in order to minimize the negative effects of the fault, but should also have a low false alarm rate. A \emph{false alarm} is when the method declares that a fault has occurred, when in fact there is no fault in the real process. 
+
+In this assignment, you will implement and test a fault detection method based on principal component analysis (PCA) that is widely used in the chemical process industry. A key advantage of PCA is that it does not require a process model. The analysis is based entirely on process data and involves computations that can be scaled up to very large data sets, which is important for large chemical processes. On the other hand, the PCA method is derived using a number of limiting assumptions, so it does not always work as expected in real processes. Moreover, there are fundamental limitations to what can be inferred from data alone, with no process model to use for guidance. Much academic research has been done, and continues to be done, to generalize this approach by using more sophisticated data analysis techniques (including machine learning) and/or incorporating process models/physics. However, these methods are beyond the scope of this assignment.
+
+\vspace{\baselineskip}
+\noindent
+{\bfseries PCA Background.} Principal component analysis is widely used for fault detection in industrial processes. The standard PCA-based fault detection method is described in \cite{chiang2000} and will be followed here. This approach does not assume a system model or any information about the disturbances and measurement noises that affect the system. Instead, it assumes that we have a historical dataset. Assuming that $n_y$ different process variables are measured, the historical data set can be represented by a matrix $\bs Y^{\circ} \in \mathbb{R}^{m\times n_y}$ composed of $m$ measured output vectors $\bs y_k^{\circ}\in \mathbb{R}^{n_y}$ collected during some period when the process was operating at steady-state without faults. The PCA method is derived based on the assumption that these outputs obey a multivariate Gaussian distribution. This holds for linear systems when the disturbances and measurement noises are serially uncorrelated Gaussian sequences, but not necessarily otherwise.
+
+The PCA method involves an offline calculation, where $\bs{Y}^{\circ}$ is analyzed to understand the normal behavior of the system and develop a fault detection test, and on online portion that is used in real time to test each new process measurement for evidence of a fault. In the offline calculation, $\bs{Y}^{\circ}$ is first normalized so that each column has zero mean and unit standard deviation (i.e., compute the mean and standard deviation of each column, subtract the mean from each element of the column, and then divide each element of the column by the standard deviation). Denote this scaled matix by $\bs{Y}$ and the scaled data points by $\bs{y}_k$. Next, the sample covariance matrix of the data is computed as
+\begin{alignat}{1}
+\bs S\equiv\frac{1}{m-1}\bs Y^\mathrm{T}\bs Y.
+\end{alignat} 
+The eigenvalue decomposition of $\bs{S}$ is computed to obtain
+\begin{alignat}{1}
+\bs S = \bs{V}\bs{D}\bs{V}^{\mathrm{T}},
+\end{alignat} 
+where $\bs{D}$ is a diagonal matrix with the eigenvalues of $\bs{S}$ in descending order on the diagonal, and $\bs{V}$ is an orthogonal matrix whose columns are the eigenvectors of $\bs{S}$ corresponding to each eigenvalue in $\bs{D}$ (This can be done with the Matlab command \verb+eig(S)+).
+
+The eigenvalues of $\bs{S}$ indicate how much of the variance in the data $\bs{Y}$ is explained by each eigenvector, as explained further in Problem 1. Often, there are several eigenvalues $\lambda_i$ that are near zero, meaning that the data does not have much variance along the direction or the corresponding eigenvector $\bs{v}_i$. This indicates that some of the measured variables are not independent of the others. Eliminating these redundancies can reduce the dimensionality of the data, which is helpful for processes with a large number of measured variables, and can help to detect certain kinds of faults more clearly. Thus, the next step in PCA is to choose some number $p\leq n_y$ such that the eigenvalues $\lambda_i$ for $i>p$ are small in magnitude relative to the others. Let $\bar{\bs{D}}$ be a $p\times p$ diagonal matrix with the largest $p$ eigenvalues on its diagonal, and let $\bar{\bs{V}}$ be the $n_y\times p$ matrix whose columns are the eigenvectors corresponding to the largest $p$ eigenvalues (i.e., the first $p$ columns of $\bs{V}$). Since $\lambda_i\approx 0$ for $i>p$, it follows that
+\begin{alignat}{1}
+\bs S \approx \bar{\bs{V}}\bar{\bs{D}}\bar{\bs{V}}^{\mathrm{T}}.
+\end{alignat}
+This provides a much more compact representation of the data in many cases. The eigenvectors remaining in $\bar{\bs{V}}$ are called the \emph{principal directions}. These directions are orthogonal to one another, and hence they describe a new coordinate system in which to view the data that makes it easier to detect certain kinds of faults. The matrices $\bar{\bs{V}}$ and $\bar{\bs{D}}$ are the final result of the offline part of the PCA method.
+
+The online part of the PCA method is executed every time that a new output measurement $\bs{y}_k^{\circ}$ is obtained from the process. The first step is to normalize the new measurement $\bs{y}^{\circ}_k$ to obtain $\bs{y}_k$ in the same way as the columns of the historical data $\bs{Y}^{\circ}$ were normalized. Next, $\bs{y}_k$ is decomposed into its components along each principal direction $\bs{v}_i$ in $\bar{\bs{V}}$ (recall that these directions describe an orthogonal basis that is aligned with the shape of the data). This information is contained in the \emph{score vector} $\bs{t}_k$, which is computed by
+\begin{alignat}{1}
+\bs{t}_k = \bar{\bs{V}}^{\mathrm{T}}\bs{y}_k.
+\end{alignat}
+%or, in matrix form for all data points as
+%\begin{alignat}{1}
+%\bs{T} = \bar{\bs{V}}^{\mathrm{T}}\bs{Y}.
+%\end{alignat}
+Each element of $\bs{t}_k$, say $(\bs{t}_k)_i$, describes the component of the vector $\bs{y}_k$ along the principal direction $\bs{v}_i$. Since $\lambda_i$ describes the variance of the historical data in the direction $\bs{v}_i$, it can be shown that, if the process is fault-free, the $i^{\mathrm{th}}$ component of $\bs{t}_k$ should obey a normal distribution with mean zero and standard deviation $\sqrt{\lambda_i}$, and should be uncorrelated from the other components. It follows that the components of the scaled vector $\bs{D}^{-\frac{1}{2}}\bs{t}_k$ obey independent normal distributions with mean zero and standard deviation $1$. Since each element of this vector is expected to have mean zero, the PCA method looks at the sum of squares of these variables to detect a fault. This is called the $T^2$ statistic and is computed as
+\begin{alignat}{1}
+T^2 &= \sum_{i=1}^p \left[\lambda_i^{-\frac{1}{2}} (\bs{t}_k)_i\right]^2, \\
+&= (\bar{\bs D}^{-\frac{1}{2}}\bs{t}_k)^{\mathrm{T}}\bar{\bs D}^{-\frac{1}{2}}\bs{t}_k, \\
+&= \bs{t}_k^{\mathrm{T}}\bar{\bs D}^{-1}\bs{t}_k, \\
+&= \bs{y}_k^{\mathrm{T}}\bar{\bs{V}}\bar{\bs D}^{-1}\bar{\bs{V}}^{\mathrm{T}}\bs{y}_k.
+\end{alignat}
+
+Since we expect $T^2$ to be near zero, a large value of $T^2$ would indicate a fault. However, $T^2$ will never be exactly zero due to normal process variability. Thus, in order to use $T^2$ to detect faults effectively, a method is needed to calculate how large $T^2$ is likely to get during fault-free operation. From the discussion above, we know that $T^2$ is the sum of the squares of $p$ variables that all obey independent normal distributions with mean zero and standard deviation $1$. Such a sum obeys a $\chi^2$ distribution with $p$ degrees of freedom. A more careful statistical analysis shows that the distribution of $T^2$ needs to be adjusted to account for the fact that $\bar{\bs{D}}$ and $\bar{\bs{V}}$ were estimated from data and are not known exactly, leading to the conclusion that $T^2$ satisfies Hotelling's $T^2$-distribution, which is where it gets its name. In any case, since the distribution of $T^2$ in the fault-free case is known, a confidence threshold for this value can be calculated analytically. To do so, we first specify a confidence limit $\eta$. Then, the $T^2$ threshold can be computed as
+\begin{alignat}{1}
+T_{\eta}^2=\frac{p(m-1)(m+1)}{m(m-p)}F_\eta (p,m-p).
+\end{alignat}
+Here, $F_\eta (p,m-p)$ is the inverse cumulative distribution function for the $F$ distribution, whose value can be computed in matlab using the function \verb+finv+ taking three inputs as $\eta$, $p$, and $m-p$.
+
+Online, a fault is declared whenever the $T^2$ value for a new measurement exceeds the threshold. The choice of $\eta$ effectively determines the false alarm rate of the method, since we expect $T^2$ to fall outside of the threshold with probability $(1-\eta)$ even when the process is fault-free. Therefore, large $\eta$ values are preferable. On the other hand, choosing $\eta$ too large will result in a loss of sensitivity. A typical value is $0.95$.
+
+\begin{problem}
+Open the file \verb+P1_main+. The provided code in this file generates and plots a set of data consisting of 500 data points for 2 measured variables. Taking this data to be the matrix $\bs{Y}^{\circ}$ in the background above, do the following:
+\begin{enumerate}
+    \item Scale the data to obtain $\bs{Y}$ as described above. Generate a new scatter plot showing the scaled data instead of the original data.
+    \item Calculate the covariance matrix $\bs{S}$ and its eigenvalue decomposition. What do you notice about the magnitudes of the two eigenvalues? How do you recommend choosing $p$ for PCA?
+    \item On the same figure as the data from Part 1, plot two lines corresponding to the directions of the two eigenvectors of $\bs{S}$. Visually examine how spread out the data is along each eigenvector and compare this to the corresponding eigenvalues. What do you notice?
+\end{enumerate}
+\end{problem}
+
+\begin{problem}
+Open the files \verb+P2_main.m+, \verb+simulateProcess.m+, and \verb+getT2.m+. This problem will guide you through the steps of applying PCA fault detection to a linear system of the form
+\begin{alignat}{1}
+\bs{x}_{k+1} &= \bs{Ax}_k + \bs{Ew}_k, \\
+\bs{y}_{k} &= \bs{Cx}_k + \bs{Fv}_k.
+\end{alignat}
+There are 5 states, 5 outputs, 2 disturbances, and 5 measurement noises. The matrices $\bs{A}$, $\bs{E}$, $\bs{C}$, and $\bs{F}$ are defined in \verb+simulateProcess.m+. Although the PCA method does not use a model, we will use this model to simulate the `real' system so that we can test the PCA method under fault-free and faulty scenarios. The file \verb+simulateProcess.m+ simulates the model above (in the fault-free case) over a horizon of 50 time steps using randomly generated disturbances and measurement noises. The distributions of $\bs{w}_k$ and $\bs{v}_k$ are described in \verb+simulateProcess.m+. Running \verb+P2_main.m+ should produce a plot of the outputs of this simulation versus time.
+
+Take some time now to read the rest of the problem statement and then read the provided Matlab files, including all comments, before beginning work. There are many important details in the comments, including parts that you need to add/modify as part of the assignment.
+
+\begin{enumerate}
+\item The file \verb+historicalData.csv+ contains 500 output measurements from the process collected during a time where the process was fault-free. This file is read into a matrix at the beginning of \verb+P2_main.m+. Write code in the first section of \verb+P2_main.m+ (offline PCA calculations) to calculate $\bar{\bs{V}}$ and $\bar{\bs{D}}$. You should find that $p=4$ is an appropriate choice. Report values for $\bs{V}$, $\bs{D}$, $\bar{\bs{V}}$, and $\bar{\bs{D}}$.
+\item Review and complete the code in the second section of \verb+P2_main.m+ (online PCA calculations). You must provide code in the indicated position for scaling the new measurement. You must also complete the appropriate code for calculating the $T^2$ value for a given $\bs{y}$ inside of the provided function template \verb+getT2.m+. Finally, you will need to compute the threshold for $T^2$ in order to test the $T^2$ values you compute. When this is done, running \verb+P2_main.m+ should produce a plot of $T^2$ versus time for the fault-free model. Provide this plot in your solution and comment on the observed false alarm rate.
+\item Now that we have tested PCA on the fault-free process conditions, we are going to introduce a fault. Modify the code in \verb+simulateProcess.m+ to simulate the case where a fault causes the distribution of $\bs{w}_k$ to change after time step 50. Specifically, shift the mean of the distribution of both components of $\bs{w}_k$ by 3. Show the $T^2$ plot. Does PCA detect the fault?
+\item Redo Part 3, only this time model a fault where only the mean of the first component of $\bs{w}_k$ is shifted by 3, while the second component is unaffected. Show the $T^2$ plot. How is this plot different than the one produced in Part 3? Does PCA detect the fault?  
+\item Spend some time experimenting with other possible faults. Find one fault that PCA detects effectively and one that it does not detect effectively and show the $T^2$ plots. (Hint: Experiment with introducing faults into the matrices $\bs{A}$, $\bs{E}$, $\bs{C}$, and $\bs{F}$.)
+\end{enumerate}
+\end{problem}
+
+\bibliographystyle{unsrt} 
+\bibliography{FD_HW_Ref}
+
+\end{document}
+
